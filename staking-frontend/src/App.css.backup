@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+.app-container {
+  @apply font-sans text-center bg-[#121212] text-white min-h-screen flex flex-col justify-center items-center;
+}
+
+button {
+  @apply bg-blue-500 border-none text-white px-5 py-2.5 mt-4 text-base rounded-lg cursor-pointer transition ease-in-out duration-200;
+}
+
+button:hover {
+  @apply bg-blue-600;
+}
