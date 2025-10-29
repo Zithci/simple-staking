@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { getContracts } from "./usecontract";
 import { formatUnits, parseUnits } from "ethers";
+import { parse } from "dotenv";
 
 const cx = (...a) => a.filter(Boolean).join(" ");
 
@@ -15,7 +16,7 @@ export default function App() {
   const [balance, setBalance] = useState("");
   const [staked, setStaked] = useState("");
   const [rewards, setRewards] = useState("");
-  
+  const [mintAmount,setMintAmount] = useState("");
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -154,6 +155,66 @@ export default function App() {
     }
   };
 
+  //MINT
+  const handleMint = async () => {
+    if(!ready || !mintAmount || Number(mintAmount)<=  0)return;
+    setBusy(true);
+    setErr("");
+    setTxHash("");
+    try{
+      const amt =parseUnits(mintAmount, decimals);
+      const tx = await contracts.token.mint(account,amt);
+      setTxHash(tx.hash);
+      await tx.wait();
+      await refresh();
+      setMintAmount("");
+    }catch (e){
+      setErr(e?.message || String(e));
+    }finally{
+      setBusy(false)
+    }
+  };
+
+  //FUND CONTRACT
+const handleFundContract = async () =>{
+  if (!ready) return;
+  setBusy (true);
+  setErr("");
+  setTxHash("");
+  try{
+    const tx = await contracts.token.mint(
+      contracts.staking.target,
+      // 100k
+      parseUnits("1000000",decimals)
+    );
+    setTxHash (tx.hash);
+    await tx.hash()
+    await refresh();
+  }catch(e){
+    setErr(e?.message || String(e));
+  }finally{
+    setBusy(false);
+  }
+};
+
+  // EXIT (unstake + claim)
+const handleExit = async () => {
+  if (!ready || !staked || Number(staked) === 0) return;
+  setBusy(true);
+  setErr("");
+  setTxHash("");
+  try {
+    const tx = await contracts.staking.exit();
+    setTxHash(tx.hash);
+    await tx.wait();
+    await refresh();
+  } catch (e) {
+    setErr(e?.message || String(e));
+  } finally {
+    setBusy(false);
+  }
+};
+
   return (
     <div className="min-h-screen bg-[#F7F8FA] dark:bg-[#1C1E26] transition-colors duration-200">
       {/* NAVBAR */}
@@ -194,8 +255,64 @@ export default function App() {
       </nav>
 
       {/* MAIN */}
-      <main className="max-w-[480px] mx-auto px-5 py-6">
-        
+      <main
+       className="max-w-[480px] mx-auto px-5 py-6">
+      <div className="bg-white dark:bg-[#23252E] rounded-3xl shadow-lg dark:shadow-none border border-neutral-200/50 dark:border-neutral-800/50 p-6 mb-5">
+        <h2 className="text-lg font-bold text-[#1C1E26] dark:text-white mb-4">
+          Mint Test Tokens & Fund Contracts
+        </h2> 
+
+   <div className="flex gap-3">
+    <input
+      type="text"
+      inputMode="decimal"
+      placeholder="1000"
+      value={mintAmount}
+      onChange={(e) => {
+        const value = e.target.value;
+        if (value === "" || /^\d*\.?\d*$/.test(value)) {
+          setMintAmount(value);
+        }
+      }}
+      className="flex-1 px-4 py-3 rounded-xl bg-neutral-100 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 text-[#1C1E26] dark:text-white outline-none focus:border-purple-500"
+    />
+    
+    <button
+      onClick={handleMint}
+      disabled={!ready || busy || !mintAmount}
+      className={cx(
+        "px-6 py-3 rounded-xl font-semibold transition-all",
+        "bg-green-600 hover:bg-green-500 text-white",
+        "disabled:opacity-50 disabled:cursor-not-allowed",
+        "active:scale-[0.98]"
+      )}
+    >
+      {busy ? "Minting..." : "Mint"}
+    </button>
+  </div>
+
+  {/* BUTTON FUND - TARUH DI SINI */}
+<button
+  onClick={handleFundContract}
+  disabled={!ready || busy}
+  className={cx(
+    "w-full py-3 rounded-lg font-semibold transition-all mt-3",
+    "bg-blue-600 hover:bg-blue-500 text-white",
+    "disabled:opacity-50 disabled:cursor-not-allowed"
+  )}
+>
+  Fund Contract (100k)
+</button>
+
+  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">
+    Mint tokens to your wallet for testing
+  </p>
+</div>
+
+
+{/*/////////////////////////////////////////////////////////////////////////////////*/}
+
+
         {/* STATS GRID */}
         <div className="grid grid-cols-3 gap-3 mb-5">
           <StatCard label="Balance" value={balance} symbol={symbol} />
@@ -272,20 +389,19 @@ export default function App() {
 
             {/* SECONDARY BUTTONS */}
             <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={handleUnstake}
-                disabled={!ready || busy || !staked || Number(staked) === 0}
-                className={cx(
-                  "h-12 rounded-xl font-medium text-sm transition-all duration-200",
-                  "bg-neutral-100 dark:bg-neutral-800/50",
-                  "hover:bg-neutral-200 dark:hover:bg-neutral-700/50",
-                  "text-neutral-700 dark:text-neutral-300",
-                  "disabled:opacity-50 disabled:cursor-not-allowed",
-                  "active:scale-[0.98]"
-                )}
-              >
-                Unstake All
-              </button>
+             <button
+              onClick={handleExit}
+              disabled={!ready || busy || !staked || Number(staked) === 0}
+              className={cx(
+                "w-full h-12 rounded-xl font-medium text-sm transition-all",
+                "bg-neutral-100 dark:bg-neutral-800/50",
+                "hover:bg-neutral-200 dark:hover:bg-neutral-700/50",
+                "text-neutral-700 dark:text-neutral-300",
+                "disabled:opacity-50 disabled:cursor-not-allowed"
+              )}
+            >
+              Exit (Unstake + Claim)
+</button>
               
               <button
                 onClick={handleClaim}

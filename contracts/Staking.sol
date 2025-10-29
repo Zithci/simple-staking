@@ -56,7 +56,7 @@ contract SimpleEpochStaking {
     //////////////////////////////////////////////////////////////*/
     // Turunkan rewardPerSecond sesuai jumlah epoch yang lewat, EPOCH(cycle)
     function updateEpoch() internal {
-        if (block.timestamp < lastEpochUpdate + EPOCH_DURATION) return;
+        if (block.timestamp < lastEpochUpdate + EPOCH_DURATION) return;d // check condtion
 
         uint256 epochsPassed = (block.timestamp - lastEpochUpdate) / EPOCH_DURATION;
         // advance anchor tepat ke batas epoch terakhir supaya deterministik
